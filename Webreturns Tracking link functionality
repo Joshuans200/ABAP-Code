@@ -1,0 +1,2064 @@
+
+
+ODATA CLASS:
+
+
+
+CLASS zcl_z_webreturns_track_dpc_ext DEFINITION
+
+ PUBLIC
+
+ INHERITING FROM zcl_z_webreturns_track_dpc
+
+ CREATE PUBLIC .
+
+
+
+ PUBLIC SECTION.
+
+ PROTECTED SECTION.
+
+
+
+ METHODS regionsset_get_entityset REDEFINITION.
+
+
+
+ METHODS trackinglinksset_get_entityset REDEFINITION.
+
+
+
+ METHODS searchbarset_get_entityset REDEFINITION.
+
+
+
+ PRIVATE SECTION.
+
+ENDCLASS.
+
+
+
+
+
+
+
+CLASS zcl_z_webreturns_track_dpc_ext IMPLEMENTATION.
+
+
+
+ METHOD regionsset_get_entityset. "Get list of Regions
+
+
+
+ DATA(lcl_webreturns_tracking_util) = NEW zcl_webreturns_tracking_util( ).
+
+
+
+ TRY.
+
+ lcl_webreturns_tracking_util->get_region(
+
+ IMPORTING
+
+ et_region_list = et_entityset ).
+
+ CATCH zcx_webreturns_tracking INTO DATA(lcx_webreturns_tracking).
+
+ RAISE EXCEPTION TYPE /iwbep/cx_mgw_busi_exception
+
+ EXPORTING
+
+ textid = /iwbep/cx_mgw_busi_exception=>business_error
+
+ message = CONV bapi_msg( lcx_webreturns_tracking->get_text( ) ).
+
+ ENDTRY.
+
+
+
+ ENDMETHOD.
+
+
+
+
+
+
+
+ METHOD trackinglinksset_get_entityset.
+
+
+
+ "Get the Tracking details.
+
+ DATA(lcl_webreturns_tracking_util) = NEW zcl_webreturns_tracking_util( ).
+
+
+
+ DATA : lt_region_range TYPE ztt_region_range_odata,
+
+ ls_region_range TYPE zst_region_range_odata.
+
+
+ TRY.
+
+ DATA(lt_region) = it_filter_select_options[ property = 'Region' ]-select_options.
+
+ CATCH cx_sy_itab_line_not_found.
+
+ RAISE EXCEPTION TYPE /iwbep/cx_mgw_busi_exception
+
+ EXPORTING
+
+ textid = /iwbep/cx_mgw_busi_exception=>business_error
+
+ message = 'Please select a Region'.
+
+ ENDTRY.
+
+
+
+ DATA : lt_entityset TYPE ztt_webreturns_track_odata,
+
+ ls_entityset TYPE zst_webreturns_track_odata.
+
+
+
+ LOOP AT lt_region ASSIGNING FIELD-SYMBOL(<fs_region>).
+
+ ls_region_range-sign = <fs_region>-sign.
+
+ ls_region_range-option = <fs_region>-option.
+
+ ls_region_range-low = <fs_region>-low.
+
+ APPEND ls_region_range TO lt_region_range.
+
+ CLEAR ls_region_range.
+
+ ENDLOOP.
+
+
+
+ DATA : lt_track_links TYPE ztt_webreturns_tracking_link.
+
+
+
+ TRY.
+
+ lt_track_links = lcl_webreturns_tracking_util->get_tracklink_by_region(
+
+ EXPORTING
+
+ it_region = lt_region_range ).
+
+
+
+ CATCH zcx_webreturns_tracking INTO DATA(lcx_webreturns_tracking).
+
+ RAISE EXCEPTION TYPE /iwbep/cx_mgw_busi_exception
+
+ EXPORTING
+
+ textid = /iwbep/cx_mgw_busi_exception=>business_error
+
+ message = CONV bapi_msg( lcx_webreturns_tracking->get_text( ) ).
+
+ ENDTRY.
+
+
+
+ LOOP AT lt_track_links ASSIGNING FIELD-SYMBOL(<fs_tracklinks>).
+
+ ls_entityset-webreturns_id = <fs_tracklinks>-webreturn_id.
+
+ ls_entityset-hybris_order = <fs_tracklinks>-hybris_order_number.
+
+ ls_entityset-article_id = <fs_tracklinks>-article_id.
+
+ ls_entityset-article_description = <fs_tracklinks>-article_description.
+
+ ls_entityset-tracking_link = <fs_tracklinks>-tracking_link.
+
+ APPEND ls_entityset TO et_entityset.
+
+ CLEAR ls_entityset.
+
+ ENDLOOP.
+
+
+
+ ENDMETHOD.
+
+
+
+
+
+
+
+ METHOD searchbarset_get_entityset.
+
+
+
+ DATA(lcl_search) = NEW zcl_webreturns_tracking_util( ).
+
+
+
+ ""Search by Webreturns ID
+
+ TRY.
+
+ DATA(lt_webreturns_id) = it_filter_select_options[ property = 'WebreturnId' ]-select_options.
+
+ CATCH cx_sy_itab_line_not_found.
+
+ RAISE EXCEPTION TYPE /iwbep/cx_mgw_busi_exception
+
+ EXPORTING
+
+ textid = /iwbep/cx_mgw_busi_exception=>business_error
+
+ message = 'Enter a valid Webreturns ID'.
+
+ ENDTRY.
+
+
+
+ DATA : lt_webreturns_id_range TYPE ztt_webreturns_id_range_odata,
+
+ ls_webreturns_id_range TYPE zst_webreturns_id_range_odata.
+
+
+
+ DATA : lt_webreturns_search TYPE ztt_webreturns_tracking_link.
+
+
+
+ LOOP AT lt_webreturns_id ASSIGNING FIELD-SYMBOL(<fs_webreturns_id>).
+
+ ls_webreturns_id_range-sign = <fs_webreturns_id>-sign.
+
+ ls_webreturns_id_range-option = 'CP'.
+
+ ls_webreturns_id_range-low = |*| && <fs_webreturns_id>-low && |*|.
+
+ APPEND ls_webreturns_id_range TO lt_webreturns_id_range.
+
+ CLEAR ls_webreturns_id_range.
+
+ ENDLOOP.
+
+
+
+ TRY.
+
+ "Calling get_tracklink_by_webreturns_id method of ZCL_WEBRETURNS_TRACKING_UTIL Class, passing webreturns id range
+
+ lt_webreturns_search = lcl_search->get_tracklink_by_webreturns_id(
+
+ EXPORTING
+
+ it_webreturns_id = lt_webreturns_id_range ).
+
+
+
+ CATCH zcx_webreturns_tracking INTO DATA(lcx_webreturns_id_search).
+
+ RAISE EXCEPTION TYPE /iwbep/cx_mgw_busi_exception
+
+ EXPORTING
+
+ textid = /iwbep/cx_mgw_busi_exception=>business_error
+
+ message = CONV bapi_msg( lcx_webreturns_id_search->get_text( ) ).
+
+ ENDTRY.
+
+
+
+
+
+
+
+
+
+ "Search by Hybris Order Numbers
+
+ TRY.
+
+ DATA(lt_hybris_orders) = it_filter_select_options[ property = 'HybrisOrders' ]-select_options.
+
+
+
+ CATCH cx_sy_itab_line_not_found.
+
+ RAISE EXCEPTION TYPE /iwbep/cx_mgw_busi_exception
+
+ EXPORTING
+
+ textid = /iwbep/cx_mgw_busi_exception=>business_error
+
+ message = 'Enter a valid Hybris Order Number'.
+
+ ENDTRY.
+
+
+
+ DATA : lt_hybrisorder_range TYPE ztt_hybris_range,
+
+ ls_hybrisorder_range TYPE zst_hybris_range.
+
+
+
+ DATA : lt_hybrisorder_search TYPE ztt_webreturns_tracking_link.
+
+
+
+ LOOP AT lt_hybris_orders ASSIGNING FIELD-SYMBOL(<fs_hybris>).
+
+ ls_hybrisorder_range-sign = 'I'.
+
+ ls_hybrisorder_range-option = 'CP'.
+
+ ls_hybrisorder_range-low = |*| && <fs_hybris>-low && |*|.
+
+ APPEND ls_hybrisorder_range TO lt_hybrisorder_range.
+
+ CLEAR ls_hybrisorder_range.
+
+ ENDLOOP.
+
+
+
+
+
+ TRY.
+
+ "Calling get_tracklink_by_hybrisorder method of ZCL_WEBRETURNS_TRACKING_UTIL Class, passing hybris order range
+
+ lt_hybrisorder_search = lcl_search->get_tracklink_by_hybrisorder(
+
+ EXPORTING
+
+ it_hybrisorder_range = lt_hybrisorder_range ).
+
+
+
+ CATCH zcx_webreturns_tracking INTO DATA(lcx_hybrisorder_search).
+
+ RAISE EXCEPTION TYPE /iwbep/cx_mgw_busi_exception
+
+ EXPORTING
+
+ textid = /iwbep/cx_mgw_busi_exception=>business_error
+
+ message = CONV bapi_msg( lcx_hybrisorder_search->get_text( ) ).
+
+ ENDTRY.
+
+
+
+
+
+
+
+
+
+ "Search by Article ID
+
+ TRY.
+
+ DATA(lt_article_id) = it_filter_select_options[ property = 'ArticleID' ]-select_options.
+
+ CATCH cx_sy_itab_line_not_found.
+
+ RAISE EXCEPTION TYPE /iwbep/cx_mgw_busi_exception
+
+ EXPORTING
+
+ textid = /iwbep/cx_mgw_busi_exception=>business_error
+
+ message = 'Enter a valid Webreturns ID'.
+
+ ENDTRY.
+
+
+
+ DATA: lt_article_id_range TYPE ztt_mat_range,
+
+ ls_article_id_range TYPE range_s_matnr.
+
+
+
+ LOOP AT lt_article_id ASSIGNING FIELD-SYMBOL(<fs_article_id>).
+
+ ls_article_id_range-sign = <fs_article_id>-sign.
+
+ ls_article_id_range-option = 'CP'.
+
+ ls_article_id_range-low = |*| && <fs_article_id>-low && |*|.
+
+ APPEND ls_article_id_range TO lt_article_id_range.
+
+ CLEAR ls_article_id_range.
+
+ ENDLOOP.
+
+
+
+ TRY.
+
+ "Calling get_tracklink_by_article_id method of ZCL_WEBRETURNS_TRACKING_UTIL Class, passing hybris order range
+
+ lcl_search->get_tracklink_by_article_id(
+
+ EXPORTING
+
+ it_article_id_range = lt_article_id_range ).
+
+
+
+ CATCH zcx_webreturns_tracking INTO DATA(lcx_article_id_search).
+
+ RAISE EXCEPTION TYPE /iwbep/cx_mgw_busi_exception
+
+ EXPORTING
+
+ textid = /iwbep/cx_mgw_busi_exception=>business_error
+
+ message = CONV bapi_msg( lcx_hybrisorder_search->get_text( ) ).
+
+ ENDTRY.
+
+
+
+ ENDMETHOD.
+
+
+
+ENDCLASS.
+==========================================================================================================
+UTIL CLASS:
+CLASS zcl_webreturns_tracking_util DEFINITION
+
+ PUBLIC
+
+ FINAL
+
+ CREATE PUBLIC .
+
+
+ PUBLIC SECTION.
+
+
+ METHODS constructor .
+
+ METHODS get_tracking_link
+
+ IMPORTING
+
+ !it_hybris_order_range TYPE ztt_range_table_webreturns
+
+ EXPORTING
+
+ !et_tracking_link TYPE ztt_webreturns_tracking_link
+
+ RAISING
+
+ zcx_webreturns_tracking.
+
+
+
+ METHODS get_tracklink_by_region
+
+ IMPORTING
+
+ !it_region TYPE ztt_region
+
+ RETURNING VALUE(rt_tracking_link) TYPE ztt_webreturns_tracking_link
+
+ RAISING
+
+ zcx_webreturns_tracking.
+
+
+
+
+
+ METHODS get_region
+
+ EXPORTING
+
+ et_region_list TYPE ztt_region_list
+
+ RAISING
+
+ zcx_webreturns_tracking.
+
+
+
+
+
+ METHODS get_tracklink_by_webreturns_id
+
+ IMPORTING
+
+ it_webreturns_id TYPE ztt_webreturns_id_range_odata
+
+ RETURNING VALUE(rt_webreturns_search) TYPE ztt_webreturns_tracking_link
+
+ RAISING
+
+ zcx_webreturns_tracking.
+
+
+
+
+
+ METHODS get_tracklink_by_hybrisorder
+
+ IMPORTING
+
+ it_hybrisorder_range TYPE ztt_hybris_range
+
+ RETURNING VALUE(rt_hybrisorder_search) TYPE ztt_webreturns_tracking_link
+
+ RAISING
+
+ zcx_webreturns_tracking.
+
+
+
+
+
+ METHODS get_tracklink_by_article_id
+
+ IMPORTING
+
+ it_article_id_range TYPE ztt_mat_range
+
+ RETURNING VALUE(rt_article_id_search) TYPE ztt_webreturns_tracking_link
+
+ RAISING
+
+ zcx_webreturns_tracking.
+
+
+
+ PROTECTED SECTION.
+
+ PRIVATE SECTION.
+
+
+
+ DATA gcl_trackin_sql_util TYPE REF TO zcl_webreturns_track_sql_util .
+
+
+
+ENDCLASS.
+
+
+
+
+
+
+
+CLASS zcl_webreturns_tracking_util IMPLEMENTATION.
+
+
+
+ METHOD constructor.
+
+
+
+ gcl_trackin_sql_util = NEW zcl_webreturns_track_sql_util( ).
+
+
+
+ ENDMETHOD.
+
+
+
+
+
+ METHOD get_tracking_link. "Get Tracking Link Details
+
+
+
+ DATA : lt_tracking_link TYPE ztt_webreturns_tracking_link,
+
+ ls_tracking_link TYPE zst_webreturns_tracking_link.
+
+
+
+
+
+ TRY.
+
+ "To fetch Hybris order number, Article ID and Tracking Link by passing Hybris order Range
+
+ gcl_trackin_sql_util->fetch_tracking_link(
+
+ EXPORTING
+
+ it_hybris_order_number = it_hybris_order_range
+
+ IMPORTING
+
+ et_tracking_link = lt_tracking_link ).
+
+ CATCH zcx_webreturns_tracking INTO DATA(lcx_webreturns_tracking).
+
+ RAISE EXCEPTION TYPE zcx_webreturns_tracking
+
+ EXPORTING
+
+ textid = lcx_webreturns_tracking->if_t100_message~t100key.
+
+ ENDTRY.
+
+
+
+ "Looping it_hybris_order_range and to check if there is a tracking link for that record
+
+
+ LOOP AT it_hybris_order_range ASSIGNING FIELD-SYMBOL(<fs_hybris_order>).
+
+ TRY.
+
+ "Reading lt_tracking_link based on hybris order number, if there is tracking link it will be appended
+
+ DATA(ls_tracking) = lt_tracking_link[ hybris_order_number = <fs_hybris_order>-low ].
+
+ APPEND ls_tracking TO et_tracking_link.
+
+ CLEAR ls_tracking.
+
+
+
+ CATCH cx_sy_itab_line_not_found.
+
+ "If there is no tracking link found, only hybris number will be appended
+
+ ls_tracking_link-hybris_order_number = <fs_hybris_order>-low.
+
+ APPEND ls_tracking_link TO et_tracking_link.
+
+ CLEAR ls_tracking_link.
+
+ ENDTRY.
+
+
+
+ CLEAR ls_tracking.
+
+
+
+ ENDLOOP.
+
+
+
+ ENDMETHOD.
+
+
+
+
+
+
+
+ METHOD get_tracklink_by_region. " Get tracking link with Region as input
+
+
+
+ DATA : lt_companycode_lang TYPE ztt_webreturn_companycode.
+
+
+
+ TRY.
+
+ "To fetch company code and corresponding language by passing Region range
+
+ gcl_trackin_sql_util->fetch_companycode(
+
+ EXPORTING
+
+ it_region_range = it_region
+
+ IMPORTING
+
+ et_companycode_lang = lt_companycode_lang ).
+
+
+
+ CATCH zcx_webreturns_tracking INTO DATA(lcx_webreturns_tracking).
+
+ RAISE EXCEPTION TYPE zcx_webreturns_tracking
+
+ EXPORTING
+
+ textid = lcx_webreturns_tracking->if_t100_message~t100key.
+
+ ENDTRY.
+
+
+
+ DATA : lt_companycode_range TYPE ztt_range_bukrs,
+
+ ls_companycode_range TYPE zst_range_bukrs.
+
+
+
+ DATA : lt_lang_range TYPE ztt_spras_range,
+
+ ls_lang_range TYPE zst_spras_range.
+
+
+
+ "Looping lt_companycode_lang to make company code and language as Ranges
+
+ LOOP AT lt_companycode_lang ASSIGNING FIELD-SYMBOL(<fs_bukrs>).
+
+ ls_companycode_range-sign = 'I'.
+
+ ls_companycode_range-option = 'EQ'.
+
+ ls_companycode_range-low = <fs_bukrs>-company_code.
+
+ APPEND ls_companycode_range TO lt_companycode_range.
+
+ CLEAR ls_companycode_range.
+
+
+
+ ls_lang_range-sign = 'I'.
+
+ ls_lang_range-option = 'EQ'.
+
+ ls_lang_range-low = <fs_bukrs>-language.
+
+ APPEND ls_lang_range TO lt_lang_range.
+
+ CLEAR ls_lang_range.
+
+ ENDLOOP.
+
+
+
+
+
+ DATA : lt_webreturns TYPE ztt_wereturns_id.
+
+
+
+ "To fetch hybris orders and webreturns ID by passing company code range
+
+ gcl_trackin_sql_util->fetch_hybrisorder(
+
+ EXPORTING
+
+ it_range_bukrs = lt_companycode_range
+
+ IMPORTING
+
+ et_webreturns = lt_webreturns ).
+
+
+
+ DATA : lt_hybrisorder_range TYPE ztt_hybris_range,
+
+ ls_hybrisorder_range TYPE zst_hybris_range.
+
+
+
+ "Looping lt_webreturns to split hybris orders and append it to orginal hybris order filed of lt_webreturns as range
+
+ LOOP AT lt_webreturns ASSIGNING FIELD-SYMBOL(<fs_webreturns>).
+
+ ls_hybrisorder_range-sign = 'I'.
+
+ ls_hybrisorder_range-option = 'EQ'.
+
+ SPLIT <fs_webreturns>-hybris_orders AT '_' INTO ls_hybrisorder_range-low DATA(lv_num).
+
+ APPEND ls_hybrisorder_range TO lt_hybrisorder_range.
+
+
+
+ TRY.
+
+ "Reading lt_hybrisorder_range based on hybris order and append it to lt_webreturns
+
+ <fs_webreturns>-orginal_hybris_order = lt_hybrisorder_range[ low = ls_hybrisorder_range-low ]-low.
+
+ CATCH cx_sy_itab_line_not_found.
+
+ ENDTRY.
+
+
+
+ CLEAR : ls_hybrisorder_range, lv_num.
+
+ ENDLOOP.
+
+
+
+ "Sorting the lt_hybrisorder_range by the field low(hybris orders)
+
+ SORT lt_hybrisorder_range BY low.
+
+
+
+ "Deleting the duplicates in lt_hybrisorder_range based on the filed low(hybris orders)
+
+ DELETE ADJACENT DUPLICATES FROM lt_hybrisorder_range COMPARING low.
+
+
+
+
+
+ TRY.
+
+ "To fetch the Hybris order numbers, Article ID and Tracking Link by passing the lt_hybrisorder_range
+
+ me->get_tracking_link(
+
+ EXPORTING
+
+ it_hybris_order_range = lt_hybrisorder_range
+
+ IMPORTING
+
+ et_tracking_link = rt_tracking_link ).
+
+
+
+ CATCH zcx_webreturns_tracking INTO lcx_webreturns_tracking.
+
+ RAISE EXCEPTION TYPE zcx_webreturns_tracking
+
+ EXPORTING
+
+ textid = lcx_webreturns_tracking->if_t100_message~t100key.
+
+ ENDTRY.
+
+
+
+
+
+ DATA: lt_mat_range TYPE ztt_mat_range,
+
+ ls_mat_range TYPE range_s_matnr.
+
+
+
+ "Looping rt_tracking_link to create Article ID range
+
+ LOOP AT rt_tracking_link ASSIGNING FIELD-SYMBOL(<fs_tracking_link>).
+
+ ls_mat_range-sign = 'I'.
+
+ ls_mat_range-option = 'EQ'.
+
+ ls_mat_range-low = <fs_tracking_link>-article_id.
+
+ APPEND ls_mat_range TO lt_mat_range.
+
+ CLEAR ls_mat_range.
+
+ ENDLOOP.
+
+
+
+
+
+ DATA : lt_article_description TYPE ztt_article_description.
+
+
+
+ "To fetch the Article description by pass Language range and Article ID range
+
+ gcl_trackin_sql_util->fetch_article_description(
+
+ EXPORTING
+
+ it_language_range = lt_lang_range
+
+ it_mat_range = lt_mat_range
+
+ IMPORTING
+
+ et_article_description = lt_article_description ).
+
+
+
+
+
+ DATA : ls_webreturns TYPE zst_wereturns_id .
+
+
+
+ "Looping rt_tracking_link to fill all the fields(Webreturns ID, Hybris orders, Article ID, Article description and Tracking Link)
+
+ LOOP AT rt_tracking_link ASSIGNING FIELD-SYMBOL(<fs_track_link>).
+
+ TRY.
+
+ "Reading lt_webreturns based on the Hybris order number to fill Webreturns ID in rt_tracking_link
+
+ <fs_track_link>-webreturn_id = lt_webreturns[ orginal_hybris_order = <fs_track_link>-hybris_order_number ]-webreturn_id.
+
+ CATCH cx_sy_itab_line_not_found.
+
+ ENDTRY.
+
+
+
+ TRY.
+
+ "Reading lt_webreturns based on Article ID to fill Article Description in rt_tracking_link
+
+ <fs_track_link>-article_description = lt_article_description[ article_id = <fs_track_link>-article_id ]-article_description.
+
+ CATCH cx_sy_itab_line_not_found.
+
+ ENDTRY.
+
+ ENDLOOP.
+
+
+
+ SORT rt_tracking_link BY hybris_order_number.
+
+
+
+ ENDMETHOD.
+
+
+
+
+
+ METHOD get_region. "Get the list of Regions
+
+
+
+ TRY.
+
+ "To fetch all the Regions
+
+ gcl_trackin_sql_util->fetch_region(
+
+ IMPORTING
+
+ et_region = et_region_list ).
+
+
+
+ CATCH zcx_webreturns_tracking INTO DATA(lcx_webreturns_tracking).
+
+ RAISE EXCEPTION TYPE zcx_webreturns_tracking
+
+ EXPORTING
+
+ textid = lcx_webreturns_tracking->if_t100_message~t100key.
+
+ ENDTRY.
+
+
+
+ ENDMETHOD.
+
+
+
+
+
+
+
+ METHOD get_tracklink_by_webreturns_id.
+
+
+
+ DATA: it_region TYPE ztt_region_list.
+
+
+
+ DATA : lt_region_range TYPE ztt_region,
+
+ ls_region_range TYPE zst_region.
+
+
+
+ "To fetch List of Regions
+
+ me->get_region(
+
+ IMPORTING
+
+ et_region_list = it_region ).
+
+
+
+ "Looping it_region to create Region range
+
+ LOOP AT it_region ASSIGNING FIELD-SYMBOL(<fs_region>).
+
+ ls_region_range-sign = 'I'.
+
+ ls_region_range-option = 'EQ'.
+
+ ls_region_range-low = <fs_region>-regions.
+
+ APPEND ls_region_range TO lt_region_range.
+
+ CLEAR ls_region_range.
+
+ ENDLOOP.
+
+
+
+
+
+ DATA : lt_companycode_lang TYPE ztt_webreturn_companycode.
+
+
+
+ TRY.
+
+ "To fetch company code and corresponding language by passing Region range
+
+ gcl_trackin_sql_util->fetch_companycode(
+
+ EXPORTING
+
+ it_region_range = lt_region_range
+
+ IMPORTING
+
+ et_companycode_lang = lt_companycode_lang ).
+
+
+
+ CATCH zcx_webreturns_tracking INTO DATA(lcx_webreturns_tracking).
+
+ RAISE EXCEPTION TYPE zcx_webreturns_tracking
+
+ EXPORTING
+
+ textid = lcx_webreturns_tracking->if_t100_message~t100key.
+
+ ENDTRY.
+
+
+
+ DATA : lt_companycode_range TYPE ztt_range_bukrs,
+
+ ls_companycode_range TYPE zst_range_bukrs.
+
+
+
+ DATA : lt_lang_range TYPE ztt_spras_range,
+
+ ls_lang_range TYPE zst_spras_range.
+
+
+
+ "Looping lt_companycode_lang to make company code and language as Ranges
+
+ LOOP AT lt_companycode_lang ASSIGNING FIELD-SYMBOL(<fs_bukrs>).
+
+ ls_companycode_range-sign = 'I'.
+
+ ls_companycode_range-option = 'EQ'.
+
+ ls_companycode_range-low = <fs_bukrs>-company_code.
+
+ APPEND ls_companycode_range TO lt_companycode_range.
+
+ CLEAR ls_companycode_range.
+
+
+
+ ls_lang_range-sign = 'I'.
+
+ ls_lang_range-option = 'EQ'.
+
+ ls_lang_range-low = <fs_bukrs>-language.
+
+ APPEND ls_lang_range TO lt_lang_range.
+
+ CLEAR ls_lang_range.
+
+ ENDLOOP.
+
+
+
+
+
+
+
+
+
+
+
+ DATA: lt_webreturns TYPE ztt_wereturns_id.
+
+
+
+ "To fetch Hybris orders, Webreturns ID by passing Webreturns ID/ID's from the user
+
+ lt_webreturns = gcl_trackin_sql_util->webreturnsid_odata(
+
+ EXPORTING
+
+ it_webreturns_id = it_webreturns_id ).
+
+
+
+
+
+
+
+
+
+
+
+ DATA : lt_hybrisorder_range TYPE ztt_hybris_range,
+
+ ls_hybrisorder_range TYPE zst_hybris_range.
+
+
+
+ DATA : rt_tracking_link TYPE ztt_webreturns_tracking_link.
+
+
+
+ "Looping lt_webreturns to split hybris orders and append it to orginal hybris order filed of lt_webreturns as range
+
+ LOOP AT lt_webreturns ASSIGNING FIELD-SYMBOL(<fs_webreturns>).
+
+ ls_hybrisorder_range-sign = 'I'.
+
+ ls_hybrisorder_range-option = 'EQ'.
+
+ SPLIT <fs_webreturns>-hybris_orders AT '_' INTO ls_hybrisorder_range-low DATA(lv_num).
+
+ APPEND ls_hybrisorder_range TO lt_hybrisorder_range.
+
+
+
+ TRY.
+
+ "Reading lt_hybrisorder_range based on hybris order and append it to lt_webreturns
+
+ <fs_webreturns>-orginal_hybris_order = lt_hybrisorder_range[ low = ls_hybrisorder_range-low ]-low.
+
+ CATCH cx_sy_itab_line_not_found.
+
+ ENDTRY.
+
+ CLEAR: ls_hybrisorder_range, lv_num.
+
+ ENDLOOP.
+
+
+
+ "Sorting the lt_hybrisorder_range by the field low(hybris orders)
+
+ SORT lt_hybrisorder_range BY low.
+
+
+
+ "Deleting the duplicates in lt_hybrisorder_range based on the filed low(hybris orders)
+
+ DELETE ADJACENT DUPLICATES FROM lt_hybrisorder_range COMPARING low.
+
+
+
+
+
+ TRY.
+
+ "To fetch the Hybris order numbers, Article ID and Tracking Link by passing the lt_hybrisorder_range
+
+ me->get_tracking_link(
+
+ EXPORTING
+
+ it_hybris_order_range = lt_hybrisorder_range
+
+ IMPORTING
+
+ et_tracking_link = rt_webreturns_search ).
+
+
+
+ CATCH zcx_webreturns_tracking INTO DATA(lcx_webreturns).
+
+ RAISE EXCEPTION TYPE zcx_webreturns_tracking
+
+ EXPORTING
+
+ textid = lcx_webreturns->if_t100_message~t100key.
+
+ ENDTRY.
+
+
+
+ DATA: lt_mat_range TYPE ztt_mat_range,
+
+ ls_mat_range TYPE range_s_matnr.
+
+
+
+ "Looping rt_tracking_link to create Article ID range
+
+ LOOP AT rt_webreturns_search ASSIGNING FIELD-SYMBOL(<fs_tracking_link>).
+
+ ls_mat_range-sign = 'I'.
+
+ ls_mat_range-option = 'EQ'.
+
+ ls_mat_range-low = <fs_tracking_link>-article_id.
+
+ APPEND ls_mat_range TO lt_mat_range.
+
+ CLEAR ls_mat_range.
+
+ ENDLOOP.
+
+
+
+
+
+ DATA : lt_article_description TYPE ztt_article_description.
+
+
+
+ "To fetch the Article description by pass Language range and Article ID range
+
+ gcl_trackin_sql_util->fetch_article_description(
+
+ EXPORTING
+
+ it_language_range = lt_lang_range
+
+ it_mat_range = lt_mat_range
+
+ IMPORTING
+
+ et_article_description = lt_article_description ).
+
+
+
+ DATA : ls_webreturns TYPE zst_wereturns_id .
+
+
+
+ "Looping rt_tracking_link to fill all the fields(Webreturns ID, Hybris orders, Article ID, Article description and Tracking Link)
+
+ LOOP AT rt_webreturns_search ASSIGNING FIELD-SYMBOL(<fs_track_link>).
+
+ TRY.
+
+ "Reading lt_webreturns based on the Hybris order number to fill Webreturns ID in rt_tracking_link
+
+ <fs_track_link>-webreturn_id = lt_webreturns[ orginal_hybris_order = <fs_track_link>-hybris_order_number ]-webreturn_id.
+
+ CATCH cx_sy_itab_line_not_found.
+
+ ENDTRY.
+
+
+
+ TRY.
+
+ "Reading lt_webreturns based on Article ID to fill Article Description in rt_tracking_link
+
+ <fs_track_link>-article_description = lt_article_description[ article_id = <fs_track_link>-article_id ]-article_description.
+
+ CATCH cx_sy_itab_line_not_found.
+
+ ENDTRY.
+
+ ENDLOOP.
+
+
+
+ SORT rt_webreturns_search BY hybris_order_number.
+
+
+
+ ENDMETHOD.
+
+
+
+
+
+
+
+ METHOD get_tracklink_by_hybrisorder. "Same as GET_TRACKLINK_BY_REGION but passing the Hybris range from the user(no special SQL method)
+
+
+
+ DATA : lt_companycode_lang TYPE ztt_webreturn_companycode.
+
+
+
+ DATA : it_region TYPE ztt_region.
+
+
+
+ TRY.
+
+ "To fetch company code and corresponding language by passing Region range
+
+ gcl_trackin_sql_util->fetch_companycode(
+
+ EXPORTING
+
+ it_region_range = it_region
+
+ IMPORTING
+
+ et_companycode_lang = lt_companycode_lang ).
+
+
+
+ CATCH zcx_webreturns_tracking INTO DATA(lcx_webreturns_tracking).
+
+ RAISE EXCEPTION TYPE zcx_webreturns_tracking
+
+ EXPORTING
+
+ textid = lcx_webreturns_tracking->if_t100_message~t100key.
+
+ ENDTRY.
+
+
+
+ DATA : lt_companycode_range TYPE ztt_range_bukrs,
+
+ ls_companycode_range TYPE zst_range_bukrs.
+
+
+
+ DATA : lt_lang_range TYPE ztt_spras_range,
+
+ ls_lang_range TYPE zst_spras_range.
+
+
+
+ "Looping lt_companycode_lang to make company code and language as Ranges
+
+ LOOP AT lt_companycode_lang ASSIGNING FIELD-SYMBOL(<fs_bukrs>).
+
+ ls_companycode_range-sign = 'I'.
+
+ ls_companycode_range-option = 'EQ'.
+
+ ls_companycode_range-low = <fs_bukrs>-company_code.
+
+ APPEND ls_companycode_range TO lt_companycode_range.
+
+ CLEAR ls_companycode_range.
+
+
+
+ ls_lang_range-sign = 'I'.
+
+ ls_lang_range-option = 'EQ'.
+
+ ls_lang_range-low = <fs_bukrs>-language.
+
+ APPEND ls_lang_range TO lt_lang_range.
+
+ CLEAR ls_lang_range.
+
+ ENDLOOP.
+
+
+
+
+
+ DATA : lt_webreturns TYPE ztt_wereturns_id.
+
+
+
+ "To fetch hybris orders and webreturns ID by passing company code range
+
+ gcl_trackin_sql_util->fetch_hybrisorder(
+
+ EXPORTING
+
+ it_range_bukrs = lt_companycode_range
+
+ IMPORTING
+
+ et_webreturns = lt_webreturns ).
+
+
+
+ DATA : lt_hybrisorder_range TYPE ztt_hybris_range,
+
+ ls_hybrisorder_range TYPE zst_hybris_range.
+
+
+
+* DATA : rt_hybrisorder_search TYPE ztt_webreturns_tracking_link.
+
+
+
+ "Looping lt_webreturns to split hybris orders and append it to orginal hybris order filed of lt_webreturns as range
+
+ LOOP AT lt_webreturns ASSIGNING FIELD-SYMBOL(<fs_webreturns>).
+
+ ls_hybrisorder_range-sign = 'I'.
+
+ ls_hybrisorder_range-option = 'EQ'.
+
+ SPLIT <fs_webreturns>-hybris_orders AT '_' INTO ls_hybrisorder_range-low DATA(lv_num).
+
+ APPEND ls_hybrisorder_range TO lt_hybrisorder_range.
+
+
+
+ TRY.
+
+ "Reading lt_hybrisorder_range based on hybris order and append it to lt_webreturns
+
+ <fs_webreturns>-orginal_hybris_order = lt_hybrisorder_range[ low = ls_hybrisorder_range-low ]-low.
+
+ CATCH cx_sy_itab_line_not_found.
+
+ ENDTRY.
+
+
+
+ CLEAR : ls_hybrisorder_range, lv_num.
+
+ ENDLOOP.
+
+
+
+ "Sorting the lt_hybrisorder_range by the field low(hybris orders)
+
+ SORT lt_hybrisorder_range BY low.
+
+
+
+ "Deleting the duplicates in lt_hybrisorder_range based on the filed low(hybris orders)
+
+ DELETE ADJACENT DUPLICATES FROM lt_hybrisorder_range COMPARING low.
+
+
+
+
+
+ TRY.
+
+ "To fetch the Hybris order numbers, Article ID and Tracking Link by passing the lt_hybrisorder_range
+
+ me->get_tracking_link(
+
+ EXPORTING
+
+ it_hybris_order_range = it_hybrisorder_range
+
+ IMPORTING
+
+ et_tracking_link = rt_hybrisorder_search ).
+
+
+
+ CATCH zcx_webreturns_tracking INTO lcx_webreturns_tracking.
+
+ RAISE EXCEPTION TYPE zcx_webreturns_tracking
+
+ EXPORTING
+
+ textid = lcx_webreturns_tracking->if_t100_message~t100key.
+
+ ENDTRY.
+
+
+
+
+
+ DATA: lt_mat_range TYPE ztt_mat_range,
+
+ ls_mat_range TYPE range_s_matnr.
+
+
+
+ "Looping rt_tracking_link to create Article ID range
+
+ LOOP AT rt_hybrisorder_search ASSIGNING FIELD-SYMBOL(<fs_tracking_link>).
+
+ ls_mat_range-sign = 'I'.
+
+ ls_mat_range-option = 'EQ'.
+
+ ls_mat_range-low = <fs_tracking_link>-article_id.
+
+ APPEND ls_mat_range TO lt_mat_range.
+
+ CLEAR ls_mat_range.
+
+ ENDLOOP.
+
+
+
+
+
+ DATA : lt_article_description TYPE ztt_article_description.
+
+
+
+ "To fetch the Article description by pass Language range and Article ID range
+
+ gcl_trackin_sql_util->fetch_article_description(
+
+ EXPORTING
+
+ it_language_range = lt_lang_range
+
+ it_mat_range = lt_mat_range
+
+ IMPORTING
+
+ et_article_description = lt_article_description ).
+
+
+
+
+
+ DATA : ls_webreturns TYPE zst_wereturns_id .
+
+
+
+ "Looping rt_tracking_link to fill all the fields(Webreturns ID, Hybris orders, Article ID, Article description and Tracking Link)
+
+ LOOP AT rt_hybrisorder_search ASSIGNING FIELD-SYMBOL(<fs_track_link>).
+
+ TRY.
+
+ "Reading lt_webreturns based on the Hybris order number to fill Webreturns ID in rt_tracking_link
+
+ <fs_track_link>-webreturn_id = lt_webreturns[ orginal_hybris_order = <fs_track_link>-hybris_order_number ]-webreturn_id.
+
+ CATCH cx_sy_itab_line_not_found.
+
+ ENDTRY.
+
+
+
+ TRY.
+
+ "Reading lt_webreturns based on Article ID to fill Article Description in rt_tracking_link
+
+ <fs_track_link>-article_description = lt_article_description[ article_id = <fs_track_link>-article_id ]-article_description.
+
+ CATCH cx_sy_itab_line_not_found.
+
+ ENDTRY.
+
+ ENDLOOP.
+
+
+
+ SORT rt_hybrisorder_search BY hybris_order_number.
+
+
+
+ ENDMETHOD.
+
+
+
+
+
+
+
+
+
+ METHOD get_tracklink_by_article_id.
+
+
+
+ DATA: lt_article_id_track_link TYPE ztt_webreturns_tracking_link.
+
+
+
+ lt_article_id_track_link = gcl_trackin_sql_util->article_id_odata(
+
+ EXPORTING
+
+ it_article_id_range = it_article_id_range ).
+
+
+
+
+
+ ENDMETHOD.
+
+
+
+ENDCLASS.
+
+===============================================================================================
+SQL CLASS:
+
+CLASS zcl_webreturns_track_sql_util DEFINITION
+
+ PUBLIC
+
+ FINAL
+
+ CREATE PUBLIC
+
+
+
+ GLOBAL FRIENDS zcl_webreturns_tracking_util .
+
+
+
+ PUBLIC SECTION.
+
+
+
+ METHODS constructor .
+
+ PROTECTED SECTION.
+
+ PRIVATE SECTION.
+
+
+
+ METHODS fetch_tracking_link
+
+ IMPORTING
+
+ !it_hybris_order_number TYPE ztt_range_table_webreturns
+
+ EXPORTING
+
+ !et_tracking_link TYPE ztt_webreturns_tracking_link
+
+ RAISING
+
+ zcx_webreturns_tracking .
+
+
+
+
+
+ METHODS fetch_companycode
+
+ IMPORTING
+
+ !it_region_range TYPE ztt_region
+
+ EXPORTING
+
+ !et_companycode_lang TYPE ztt_webreturn_companycode
+
+ RAISING
+
+ zcx_webreturns_tracking.
+
+
+
+
+
+ METHODS fetch_hybrisorder
+
+ IMPORTING
+
+ !it_range_bukrs TYPE ztt_range_bukrs
+
+ EXPORTING
+
+ !et_webreturns TYPE ztt_wereturns_id
+
+ RAISING
+
+ zcx_webreturns_tracking.
+
+
+
+
+
+ METHODS fetch_article_description
+
+ IMPORTING
+
+ it_language_range TYPE ztt_spras_range
+
+ it_mat_range TYPE ztt_mat_range
+
+ EXPORTING
+
+ et_article_description TYPE ztt_article_description
+
+ RAISING
+
+ zcx_webreturns_tracking.
+
+
+
+
+
+ METHODS fetch_region
+
+ EXPORTING
+
+ !et_region TYPE ztt_region_list
+
+ RAISING
+
+ zcx_webreturns_tracking.
+
+
+
+
+
+ METHODS webreturnsid_odata
+
+ IMPORTING
+
+ it_webreturns_id TYPE ztt_webreturns_id_range_odata
+
+ RETURNING VALUE(rt_webreturns) TYPE ztt_wereturns_id
+
+ RAISING
+
+ zcx_webreturns_tracking.
+
+
+
+
+
+ METHODS article_id_odata
+
+ IMPORTING
+
+ it_article_id_range TYPE ztt_mat_range
+
+ RETURNING VALUE(et_article_id_search) TYPE ztt_webreturns_tracking_link
+
+ RAISING
+
+ zcx_webreturns_tracking.
+
+
+
+ENDCLASS.
+
+
+
+
+
+
+
+CLASS zcl_webreturns_track_sql_util IMPLEMENTATION.
+
+
+
+ METHOD constructor.
+
+ ENDMETHOD.
+
+
+
+
+
+ METHOD fetch_tracking_link.
+
+
+
+ "Fetching the Hybris Order Number, Article ID and the Tracking Link by passing Hybris order range
+
+ SELECT vbak~bstnk AS hybris_order_number,
+
+ lips~matnr AS article_id,
+
+ tracker~tracking_code AS tracking_link
+
+ INTO CORRESPONDING FIELDS OF TABLE @et_tracking_link
+
+ FROM vbak
+
+ INNER JOIN vbfa
+
+ ON vbfa~vbelv = vbak~vbeln
+
+ INNER JOIN zecom_wms_track AS tracker
+
+ ON tracker~vbeln = vbfa~vbeln
+
+ AND tracker~posnr = vbfa~posnn
+
+ INNER JOIN lips
+
+ ON lips~posnr = vbfa~posnn
+
+ AND lips~vbeln = vbfa~vbeln
+
+ WHERE vbak~bstnk IN @it_hybris_order_number
+
+ AND vbfa~vbtyp_n = 'J'.
+
+
+
+ IF sy-subrc <> 0.
+
+ RAISE EXCEPTION TYPE zcx_webreturns_tracking
+
+ EXPORTING
+
+ textid = zcx_webreturns_tracking=>tracking_link_not_found.
+
+ ENDIF.
+
+
+
+ ENDMETHOD.
+
+
+
+
+
+ METHOD fetch_companycode.
+
+
+
+ "Fetching the Company code and corresponding Language by passing Region range
+
+ SELECT zfiori_buss_data~bukrs,
+
+ zfiori_buss_data~language
+
+ INTO TABLE @et_companycode_lang
+
+ FROM zfiori_buss_data
+
+ WHERE zfiori_buss_data~country_key IN @it_region_range
+
+ AND zfiori_buss_data~app_id = 'WEB_RETURNS'.
+
+
+
+ IF sy-subrc <> 0.
+
+ RAISE EXCEPTION TYPE zcx_webreturns_tracking
+
+ EXPORTING
+
+ textid = zcx_webreturns_tracking=>company_code_not_found.
+
+ ENDIF.
+
+ ENDMETHOD.
+
+
+
+
+
+ METHOD fetch_hybrisorder.
+
+
+
+ "Fetching Hybris order numbers and Webreturns ID by passing Company code range
+
+ SELECT zwebordr_returns~hybrisorder,
+
+ zwebordr_returns~return_id
+
+ INTO TABLE @et_webreturns
+
+ FROM zwebordr_returns
+
+ WHERE company_code IN @it_range_bukrs.
+
+
+
+ IF sy-subrc <> 0.
+
+ RAISE EXCEPTION TYPE zcx_webreturns_tracking
+
+ EXPORTING
+
+ textid = zcx_webreturns_tracking=>hybrisorder_not_found.
+
+ ENDIF.
+
+
+
+ ENDMETHOD.
+
+
+
+
+
+ METHOD fetch_article_description.
+
+
+
+ "Fetching Article Description by passing Language range
+
+ SELECT maktx,
+
+ matnr
+
+ FROM makt
+
+ INTO TABLE @et_article_description
+
+ WHERE spras IN @it_language_range
+
+ AND matnr IN @it_mat_range.
+
+
+
+ IF sy-subrc <> 0.
+
+ RAISE EXCEPTION TYPE zcx_webreturns_tracking
+
+ EXPORTING
+
+ textid = zcx_webreturns_tracking=>article_description_not_found.
+
+ ENDIF.
+
+
+
+ ENDMETHOD.
+
+
+
+
+
+ METHOD fetch_region.
+
+
+
+ "Fetching list of Regions for Method Region
+
+ SELECT zfiori_buss_data~country_key
+
+ INTO TABLE @et_region
+
+ FROM zfiori_buss_data
+
+ WHERE zfiori_buss_data~app_id = 'WEB_RETURNS'.
+
+
+
+ IF sy-subrc <> 0.
+
+ RAISE EXCEPTION TYPE zcx_webreturns_tracking
+
+ EXPORTING
+
+ textid = zcx_webreturns_tracking=>regions_not_found.
+
+ ENDIF.
+
+
+
+ ENDMETHOD.
+
+
+
+
+
+ METHOD webreturnsid_odata.
+
+
+
+ SELECT zwebordr_returns~hybrisorder,
+
+ zwebordr_returns~return_id
+
+ INTO TABLE @rt_webreturns
+
+ FROM zwebordr_returns
+
+ WHERE return_id IN @it_webreturns_id.
+
+
+
+ IF sy-subrc <> 0.
+
+ RAISE EXCEPTION TYPE zcx_webreturns_tracking
+
+ EXPORTING
+
+ textid = zcx_webreturns_tracking=>hybrisorder_not_found.
+
+ ENDIF.
+
+
+
+ ENDMETHOD.
+
+
+
+
+
+ METHOD article_id_odata.
+
+
+
+ "Fetching the Hybris Order Number, Article ID and the Tracking Link by passing Hybris order range
+
+ SELECT vbak~bstnk AS hybris_order_number,
+
+ lips~matnr AS article_id,
+
+ tracker~tracking_code AS tracking_link
+
+ INTO CORRESPONDING FIELDS OF TABLE @et_article_id_search
+
+ FROM vbak
+
+ INNER JOIN vbfa
+
+ ON vbfa~vbelv = vbak~vbeln
+
+ INNER JOIN zecom_wms_track AS tracker
+
+ ON tracker~vbeln = vbfa~vbeln
+
+ AND tracker~posnr = vbfa~posnn
+
+ INNER JOIN lips
+
+ ON lips~posnr = vbfa~posnn
+
+ AND lips~vbeln = vbfa~vbeln
+
+ WHERE lips~matnr IN @it_article_id_range
+
+ AND vbfa~vbtyp_n = 'J'.
+
+
+
+ IF sy-subrc <> 0.
+
+ RAISE EXCEPTION TYPE zcx_webreturns_tracking
+
+ EXPORTING
+
+ textid = zcx_webreturns_tracking=>tracking_link_not_found.
+
+ ENDIF.
+
+
+
+ ENDMETHOD.
+
+
+
+ENDCLASS.
+
+
+
